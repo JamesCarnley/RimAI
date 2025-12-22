@@ -14,7 +14,7 @@ RIMWORLD_MANAGED_PATH="$1"
 
 # Target Directory for Installation
 # Users can override this by setting RIMWORLD_MODS_DIR env var
-TARGET_MODS_DIR="${RIMWORLD_MODS_DIR:-/Users/james/Library/Application Support/Steam/steamapps/common/RimWorld/RimWorldMac.app/Mods}"
+TARGET_MODS_DIR="${RIMWORLD_MODS_DIR:-$HOME/Library/Application Support/Steam/steamapps/common/RimWorld/RimWorldMac.app/Mods}"
 MOD_NAME="RimAI"
 DEST_DIR="$TARGET_MODS_DIR/$MOD_NAME"
 

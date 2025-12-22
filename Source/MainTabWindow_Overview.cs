@@ -40,7 +40,7 @@ namespace RimAI
             
             if (isLoading)
             {
-                Widgets.Label(contentRect, "Contacting AI Satellite (via UnityWebRequest)...");
+                Widgets.Label(contentRect, "Contacting AI Satellite...");
             }
             else if (!aiResult.NullOrEmpty())
             {
