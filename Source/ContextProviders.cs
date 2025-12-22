@@ -14,6 +14,7 @@ namespace RimAI
     {
         public void Populate(ColonyStateDTO dto, Map map)
         {
+            dto.ModVersion = "1.1.0 (Dev)";
             dto.Date = GenDate.DateFullStringAt(Find.TickManager.TicksAbs, Find.WorldGrid.LongLatOf(map.Tile));
             dto.Weather = map.weatherManager.curWeather.label;
             dto.Wealth = map.wealthWatcher.WealthTotal;
@@ -26,12 +27,16 @@ namespace RimAI
         public void Populate(ColonyStateDTO dto, Map map)
         {
             var counter = map.resourceCounter;
-            dto.Resources["Food"] = counter.TotalHumanEdibleNutrition.ToString("F0") + " Nutrition";
-            dto.Resources["Medicine"] = (counter.GetCount(ThingDefOf.MedicineHerbal) + counter.GetCount(ThingDefOf.MedicineIndustrial)).ToString();
-            dto.Resources["Silver"] = counter.GetCount(ThingDefOf.Silver).ToString();
-            dto.Resources["Components"] = (counter.GetCount(ThingDefOf.ComponentIndustrial) + counter.GetCount(ThingDefOf.ComponentSpacer)).ToString();
-            dto.Resources["Steel"] = counter.GetCount(ThingDefOf.Steel).ToString();
-            dto.Resources["Wood"] = counter.GetCount(ThingDefOf.WoodLog).ToString();
+            dto.Resources["Food"] = counter.TotalHumanEdibleNutrition.ToString("F1") + " Nutrition";
+
+            foreach (var def in counter.AllCountedAmounts.Keys)
+            {
+                int count = counter.GetCount(def);
+                if (count > 0)
+                {
+                    dto.Resources[def.LabelCap] = count.ToString();
+                }
+            }
         }
     }
 
@@ -41,57 +46,35 @@ namespace RimAI
         {
             foreach (var pawn in map.mapPawns.FreeColonists)
             {
-                var pDto = new ColonistDTO();
-                pDto.Name = pawn.Name.ToStringShort;
-                pDto.Job = pawn.CurJobDef?.label ?? "Idle";
+                dto.Colonists.Add(PawnScraper.Scrape(pawn));
+            }
+        }
+    }
 
-                // Traits
-                if (pawn.story != null && pawn.story.traits != null)
-                {
-                    foreach (var trait in pawn.story.traits.allTraits)
-                    {
-                        pDto.Traits.Add(trait.Label);
-                    }
-                }
+    public class AnimalProvider : IContextProvider
+    {
+        public void Populate(ColonyStateDTO dto, Map map)
+        {
+             var animals = map.mapPawns.SpawnedPawnsInFaction(Faction.OfPlayer)
+                .Where(p => p.RaceProps.Animal);
 
-                // Skills (Notable ones > 8)
-                if (pawn.skills != null)
-                {
-                    foreach (var skill in pawn.skills.skills)
-                    {
-                        if (!skill.TotallyDisabled && skill.Level > 8)
-                        {
-                            pDto.Skills.Add($"{skill.def.label} ({skill.Level})");
-                        }
-                    }
-                }
+            foreach (var pawn in animals)
+            {
+                dto.Animals.Add(PawnScraper.Scrape(pawn));
+            }
+        }
+    }
 
-                // Mood
-                if (pawn.needs != null && pawn.needs.mood != null)
-                {
-                    pDto.Mood = pawn.needs.mood.CurLevel.ToString("P0");
-                    foreach (var memory in pawn.needs.mood.thoughts.memories.Memories)
-                    {
-                        if (memory.MoodOffset() != 0) // Capture everything significant
-                        {
-                            pDto.Thoughts.Add($"{memory.LabelCap}: {memory.MoodOffset()}");
-                        }
-                    }
-                }
+    public class MechanoidProvider : IContextProvider
+    {
+        public void Populate(ColonyStateDTO dto, Map map)
+        {
+             var mechs = map.mapPawns.SpawnedPawnsInFaction(Faction.OfPlayer)
+                .Where(p => p.RaceProps.IsMechanoid);
 
-                // Health
-                if (pawn.health != null && pawn.health.hediffSet != null)
-                {
-                    foreach (var h in pawn.health.hediffSet.hediffs)
-                    {
-                        if (h.Visible && (h.def.isBad || h.def.makesSickThought))
-                        {
-                            pDto.Health.Add(h.LabelCap);
-                        }
-                    }
-                }
-
-                dto.Colonists.Add(pDto);
+            foreach (var pawn in mechs)
+            {
+                dto.Mechanoids.Add(PawnScraper.Scrape(pawn));
             }
         }
     }
@@ -183,7 +166,7 @@ namespace RimAI
     {
         public void Populate(ColonyStateDTO dto, Map map)
         {
-            var enemies = map.mapPawns.AllPawns.Where(p => p.HostileTo(Faction.OfPlayer) && !p.Downed && !p.Dead);
+            var enemies = map.mapPawns.AllPawns.Where(p => p.HostileTo(Faction.OfPlayer) && !p.Downed && !p.Dead && !p.Position.Fogged(map));
             if (enemies.Any())
             {
                 var groups = enemies.GroupBy(p => p.KindLabel).Select(g => $"{g.Count()}x {g.Key}");
@@ -195,6 +178,62 @@ namespace RimAI
             {
                  dto.ActiveThreats.Add($"Condition: {cond.LabelCap}");
             }
+        }
+    }
+
+    public class RoomProvider : IContextProvider
+    {
+        public void Populate(ColonyStateDTO dto, Map map)
+        {
+            if (map.regionGrid == null) return;
+
+            List<Room> allRooms = null;
+            try
+            {
+                // Access allRooms via reflection as it might be internal/protected in some versions
+                var field = typeof(RegionGrid).GetField("allRooms", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                if (field != null)
+                {
+                    allRooms = field.GetValue(map.regionGrid) as List<Room>;
+                }
+            }
+            catch
+            {
+                // Fallback or silence
+            }
+
+            if (allRooms == null) return;
+
+            foreach (var room in allRooms)
+            {
+                if (room.PsychologicallyOutdoors || room.IsHuge || room.CellCount < 6 || room.Role == RoomRoleDefOf.None) continue;
+                
+                // Check if room is hidden/fogged
+                if (room.Cells.FirstOrDefault().Fogged(map)) continue;
+
+                var rDto = new RoomDTO
+                {
+                    Role = room.Role.label,
+                    Impressiveness = room.GetStat(RoomStatDefOf.Impressiveness),
+                    Wealth = room.GetStat(RoomStatDefOf.Wealth),
+                    CellCount = room.CellCount
+                };
+
+                // Notable buildings
+                // We'll iterate the contained things. This can be heavy, so we limit it.
+                // A better heuristic is checking the contained buildings that define the room role or are high value.
+                
+                var buildings = room.ContainedAndAdjacentThings.Where(t => t.def.building != null && (t.def.building.isSittable || (t.def.recipes != null && t.def.recipes.Count > 0) || t.def.building.bed_maxBodySize > 0));
+                
+                // Just group by count
+                var grouped = buildings.GroupBy(b => b.LabelCap).Select(g => $"{g.Count()}x {g.Key}");
+                rDto.NotableBuildings.AddRange(grouped);
+
+                dto.Rooms.Add(rDto);
+            }
+            
+            // Sort by impressiveness to prioritize important rooms
+            dto.Rooms.Sort((a, b) => b.Impressiveness.CompareTo(a.Impressiveness));
         }
     }
 }
