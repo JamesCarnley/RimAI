@@ -1,0 +1,11 @@
+/Users/james/Code/Rimworld/Source/obj/Debug/RimAI.csproj.AssemblyReference.cache
+/Users/james/Code/Rimworld/Source/obj/Debug/RimAI.GeneratedMSBuildEditorConfig.editorconfig
+/Users/james/Code/Rimworld/Source/obj/Debug/RimAI.AssemblyInfoInputs.cache
+/Users/james/Code/Rimworld/Source/obj/Debug/RimAI.AssemblyInfo.cs
+/Users/james/Code/Rimworld/Source/obj/Debug/RimAI.csproj.CoreCompileInputs.cache
+/Users/james/Code/Rimworld/Source/bin/Debug/RimAI.dll
+/Users/james/Code/Rimworld/Source/bin/Debug/RimAI.pdb
+/Users/james/Code/Rimworld/Source/obj/Debug/RimAI.dll
+/Users/james/Code/Rimworld/Source/obj/Debug/RimAI.pdb
+/Users/james/Code/Rimworld/Source/bin/Debug/Newtonsoft.Json.dll
+/Users/james/Code/Rimworld/Source/obj/Debug/RimAI.csproj.Up2Date

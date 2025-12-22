@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+  <MainButtonDef>
+    <defName>RimAI_Overview</defName>
+    <label>RoamAI</label>
+    <description>Open the AI Colony Overview window.</description>
+    <tabWindowClass>RimAI.MainTabWindow_Overview</tabWindowClass>
+    <iconPath>UI/OverviewIcon</iconPath>
+    <order>90</order>
+  </MainButtonDef>
+</Defs>

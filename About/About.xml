@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ModMetaData>
+  <name>RimAI</name>
+  <author>Antigravity</author>
+  <packageId>Antigravity.RimAI</packageId>
+  <supportedVersions>
+    <li>1.5</li>
+    <li>1.6</li>
+  </supportedVersions>
+  <description>Adds an AI-powered colony overview button to RimWorld. Requires an API Key from Google Gemini or OpenAI.</description>
+</ModMetaData>
