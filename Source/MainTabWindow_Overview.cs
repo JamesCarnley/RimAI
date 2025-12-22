@@ -30,6 +30,14 @@ namespace RimAI
                     GenerateOverview();
                 }
             }
+            
+            Rect debugBtnRect = new Rect(210, y, 150, 40);
+            if (Widgets.ButtonText(debugBtnRect, "Debug Data"))
+            {
+                var data = DataScraper.Scrape();
+                string json = JsonConvert.SerializeObject(data, Formatting.Indented);
+                Find.WindowStack.Add(new Dialog_DebugInfo(json));
+            }
 
             y += 50f;
 
@@ -82,9 +90,9 @@ namespace RimAI
                 APIClient.SendWithHttpClient(apiKey, finalJson,
                     onSuccess: (result) => 
                     {
-                        aiResult = result;
+                        aiResult = MarkdownUtils.ToRichText(result);
                         isLoading = false;
-                        Log.Message("[RimAI] Success:\n" + result);
+                        Log.Message("[RimAI] Success:\n" + result); // Log original for debug
                     },
                     onError: (error) =>
                     {
