@@ -22,6 +22,7 @@ namespace RimAI
             RegisterProvider(new RoomProvider());
             RegisterProvider(new AnimalProvider());
             RegisterProvider(new MechanoidProvider());
+            RegisterProvider(new MapProvider());
         }
 
         public static void RegisterProvider(IContextProvider provider)

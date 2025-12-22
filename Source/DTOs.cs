@@ -7,6 +7,7 @@ namespace RimAI
         public string Date;
         public string ModVersion;
         public string Weather;
+        public MapDTO Map;
         public int Population;
         public float Wealth;
         public PowerDTO Power;
@@ -20,6 +21,15 @@ namespace RimAI
         public List<RoomDTO> Rooms = new List<RoomDTO>();
         public List<ColonistDTO> Animals = new List<ColonistDTO>();
         public List<ColonistDTO> Mechanoids = new List<ColonistDTO>();
+    }
+
+    public class MapDTO
+    {
+        public string Biome;
+        public string Season;
+        public float Temperature; // Celsius
+        public string Size;
+        public float Pollution; // 0-1
     }
 
     public class ColonistDTO
