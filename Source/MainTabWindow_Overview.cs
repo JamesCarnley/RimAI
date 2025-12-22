@@ -55,39 +55,61 @@ namespace RimAI
             Rect chatRect = new Rect(0, y, inRect.width, inRect.height - y - 110f); // Reserve more space (110f)
             Widgets.DrawMenuSection(chatRect);
             
+            // Layout Constants
+            float scrollBarWidth = 16f;
+            float textPadding = 10f;
+            float textWidth = chatRect.width - scrollBarWidth - textPadding;
+
             float contentHeight = 0f;
             foreach (var msg in chatSession.messages)
             {
-                // Header (20) + Text + Padding (15) = 35 overhead
-                contentHeight += 20f + Text.CalcHeight(msg.text, chatRect.width - 26f) + 15f; 
+                Text.Font = GameFont.Small;
+                // Use consistent width. 
+                // We add a moderate buffer (+10f) to the calculated height to account for font rendering differences
+                // and rich text tags that might slightly alter line height.
+                contentHeight += 24f + Text.CalcHeight(msg.text, textWidth) + 10f; 
             }
             
             if (isLoading) contentHeight += 40f;
+            // No extra global buffer needed if per-message buffer is correct
 
             // Ensure viewRect is at least the size of the chatRect so it looks okay empty
             if (contentHeight < chatRect.height) contentHeight = chatRect.height;
             
-            Rect viewRect = new Rect(0, 0, chatRect.width - 16f, contentHeight);
+            Rect viewRect = new Rect(0, 0, chatRect.width - scrollBarWidth, contentHeight);
             
             Widgets.BeginScrollView(chatRect, ref scrollPosition, viewRect);
             float curY = 5f;
             foreach (var msg in chatSession.messages)
             {
+                Text.Font = GameFont.Small;
                 string displayRole = msg.role == "user" ? "You" : "AI";
                 
                 // Header
-                Rect rollRect = new Rect(5f, curY, viewRect.width - 10f, 20f);
-                GUI.color = msg.role == "user" ? new Color(0.6f, 0.9f, 1f) : GenUI.MouseoverColor; // Brighter Ice Blue for user, Highlight for AI
-                Widgets.Label(rollRect, displayRole);
+                Rect rowRect = new Rect(5f, curY, textWidth, 24f);
+                GUI.color = msg.role == "user" ? new Color(0.6f, 0.9f, 1f) : GenUI.MouseoverColor; 
+                Widgets.Label(new Rect(rowRect.x, rowRect.y, 100f, rowRect.height), displayRole);
                 GUI.color = Color.white;
-                curY += 20f;
+                
+                // Copy Button
+                if (Widgets.ButtonText(new Rect(rowRect.xMax - 60f, rowRect.y, 60f, 18f), "Copy"))
+                {
+                    GUIUtility.systemCopyBuffer = msg.text;
+                    Messages.Message("Copied to clipboard", MessageTypeDefOf.TaskCompletion, false);
+                }
+
+                curY += 24f;
                 
                 // Content
-                float textHeight = Text.CalcHeight(msg.text, viewRect.width - 10f);
-                Rect textRect = new Rect(5f, curY, viewRect.width - 10f, textHeight);
+                float textHeight = Text.CalcHeight(msg.text, textWidth); 
+                
+                // Draw in the full 'textWidth'
+                // Add the same buffer to the rect to ensure it acts as a container that won't clip
+                Rect textRect = new Rect(5f, curY, textWidth, textHeight + 10f);
                 Widgets.Label(textRect, msg.text);
                 
-                curY += textHeight + 15f;
+                // Move cursor by the *actual* spacing logic used in contentHeight
+                curY += textHeight + 10f; 
             }
 
             if (isLoading)

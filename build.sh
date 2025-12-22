@@ -67,11 +67,17 @@ fi
 
 # Restore/Add Packages
 echo "Restoring packages..."
-dotnet restore "$SOURCE_DIR/RimAI.csproj"
+if ! dotnet restore "$SOURCE_DIR/RimAI.csproj"; then
+    echo "Error: Restore failed."
+    exit 1
+fi
 
 # Build
 echo "Building..."
-dotnet build "$SOURCE_DIR/RimAI.csproj" -c Debug
+if ! dotnet build "$SOURCE_DIR/RimAI.csproj" -c Debug; then
+    echo "Error: Build failed."
+    exit 1
+fi
 
 # Copy to local 1.6/Assemblies (1.5 support removed)
 echo "Updating local assemblies for 1.6..."

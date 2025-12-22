@@ -23,6 +23,11 @@ namespace RimAI
             RegisterProvider(new AnimalProvider());
             RegisterProvider(new MechanoidProvider());
             RegisterProvider(new MapProvider());
+            providers.Add(new ZoneProvider());
+            providers.Add(new FactionProvider());
+            providers.Add(new WildlifeProvider());
+            providers.Add(new IdeologyProvider());
+            providers.Add(new BillProvider());
         }
 
         public static void RegisterProvider(IContextProvider provider)

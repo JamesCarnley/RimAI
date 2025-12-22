@@ -18,6 +18,19 @@ namespace RimAI
             dto.Date = GenDate.DateFullStringAt(Find.TickManager.TicksAbs, Find.WorldGrid.LongLatOf(map.Tile));
             dto.Weather = map.weatherManager.curWeather.label;
             dto.Wealth = map.wealthWatcher.WealthTotal;
+            if (Find.Storyteller != null)
+            {
+                if (Find.Storyteller.def != null) dto.Storyteller = Find.Storyteller.def.label;
+                
+                // Difficulty
+                if (Find.Storyteller.difficultyDef != null) dto.Difficulty = Find.Storyteller.difficultyDef.label;
+                else if (Find.Storyteller.difficulty != null) dto.Difficulty = "Custom/Unknown";
+                
+                // Fallback for nulls
+                if (dto.Storyteller == null) dto.Storyteller = "Unknown";
+                if (dto.Difficulty == null) dto.Difficulty = "Unknown";
+            }
+            
             dto.Population = map.mapPawns.FreeColonistsCount;
         }
     }
@@ -102,29 +115,28 @@ namespace RimAI
         public void Populate(ColonyStateDTO dto, Map map)
         {
             // Simple power net analysis
-            // We just look at the first connected battery or generator we find to assume the main grid state
-            // This is a simplification; colonies can have multiple grids.
-            // We will sum up all batteries and production on the map for a rough estimate.
+            // We iterate PowerComp objects to determine production/consumption
             
             float stored = 0f;
             float producing = 0f;
-            // float consuming = 0f;
+            float consuming = 0f;
 
-            // This is computationally expensive if we iterate everything.
-            // Using PowerNetManager is better.
-            
             foreach (var net in map.powerNetManager.AllNetsListForReading)
             {
                 stored += net.CurrentStoredEnergy();
-                producing += net.CurrentEnergyGainRate() / CompPower.WattsToWattDaysPerTick; // Raw watts roughly
+                foreach (var comp in net.powerComps)
+                {
+                     if (comp.PowerOutput > 0) producing += comp.PowerOutput;
+                     else if (comp.PowerOutput < 0) consuming -= comp.PowerOutput; // Make positive
+                }
             }
             
-            // Simplified: Just report stored and total gain rate
             dto.Power = new PowerDTO
             {
                 Stored = stored,
-                Producing = producing, // This is actually Gain Rate (Producing - Consuming)
-                GridStatus = producing > 0 ? "Gaining" : (producing < 0 ? "Draining" : "Stable")
+                Producing = producing, 
+                Consuming = consuming,
+                GridStatus = (producing > consuming) ? "Gaining" : (producing < consuming ? "Draining" : "Stable")
             };
         }
     }

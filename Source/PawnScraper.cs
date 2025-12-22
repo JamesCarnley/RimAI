@@ -23,8 +23,8 @@ namespace RimAI
             // Safe Reflection for Pawn Properties
             ScrapeProperties(pawn, dto.RawProperties);
             
-            // Safe Reflection for Def Properties
-            ScrapeProperties(pawn.def, dto.DefProperties);
+            // REMOVED: DefProperties (Too verbose/token heavy)
+            // ScrapeProperties(pawn.def, dto.DefProperties);
 
             // Stat Bases
             if (pawn.def.statBases != null)
@@ -65,8 +65,29 @@ namespace RimAI
             {
                 foreach (var skill in pawn.skills.skills)
                 {
-                    if (!skill.TotallyDisabled && skill.Level > 0) dto.Skills.Add($"{skill.def.label} ({skill.Level})");
+                    if (!skill.TotallyDisabled)
+                    {
+                        string passion = "";
+                        if (skill.passion == Passion.Minor) passion = " (Minor)";
+                        else if (skill.passion == Passion.Major) passion = " (Major)";
+                        
+                        if (skill.Level > 0 || skill.passion != Passion.None)
+                        {
+                            dto.Skills.Add($"{skill.def.label} {skill.Level}{passion}");
+                        }
+                    }
                 }
+            }
+            
+            // Social
+            if (pawn.relations != null)
+            {
+                 foreach(var rel in pawn.relations.DirectRelations)
+                 {
+                     string opinion = "";
+                     try { opinion = $" (Opinion: {pawn.relations.OpinionOf(rel.otherPawn)})"; } catch {}
+                     dto.Social.Add($"{rel.def.LabelCap}: {rel.otherPawn.Name.ToStringShort ?? rel.otherPawn.LabelShort}{opinion}");
+                 }
             }
 
             // Health
@@ -84,6 +105,17 @@ namespace RimAI
                 if (pawn.needs.mood != null) dto.Mood = pawn.needs.mood.CurLevel.ToString("P0");
                 if (pawn.needs.food != null) dto.RawProperties["FoodLevel"] = pawn.needs.food.CurLevel.ToString("P0");
                 if (pawn.needs.rest != null) dto.RawProperties["RestLevel"] = pawn.needs.rest.CurLevel.ToString("P0");
+                
+                // Thoughts
+                if (pawn.needs.mood != null && pawn.needs.mood.thoughts != null)
+                {
+                    List<Thought> thoughts = new List<Thought>();
+                    pawn.needs.mood.thoughts.GetAllMoodThoughts(thoughts);
+                    foreach(var t in thoughts)
+                    {
+                        dto.Thoughts.Add($"{t.LabelCap} ({t.MoodOffset():F0})");
+                    }
+                }
             }
 
             // DLCs
@@ -101,7 +133,6 @@ namespace RimAI
                 foreach (var ab in pawn.abilities.abilities) dto.Abilities.Add(ab.def.LabelCap);
             }
 
-            // Relations (Overseer/Master)
             if (pawn.relations != null)
             {
                 var overseer = pawn.relations.GetFirstDirectRelationPawn(PawnRelationDefOf.Overseer);
@@ -109,6 +140,71 @@ namespace RimAI
                 
                 var master = pawn.playerSettings?.Master;
                 if (master != null) dto.RawProperties["Master"] = master.Name.ToStringShort;
+            }
+
+            // Management (Work, Schedule, Assignments)
+            // Only for colonists
+            if (pawn.IsColonist)
+            {
+                var m = new WorkScheduleDTO();
+                
+                // Work Priorities
+                if (pawn.workSettings != null)
+                {
+                    // Iterate all work types
+                    foreach (var w in DefDatabase<WorkTypeDef>.AllDefsListForReading)
+                    {
+                        if (pawn.workSettings.WorkIsActive(w))
+                        {
+                            m.WorkPriorities[w.labelShort] = pawn.workSettings.GetPriority(w);
+                        }
+                    }
+                }
+
+                // Schedule
+                if (pawn.timetable != null)
+                {
+                    // Create a compact string of 24h assignments
+                    // U = Undefined / Anything, W = Work, R = Joy, S = Sleep, M = Meditation
+                    var chars = new char[24];
+                    for (int i = 0; i < 24; i++)
+                    {
+                        var type = pawn.timetable.GetAssignment(i);
+                        if (type == TimeAssignmentDefOf.Anything) chars[i] = 'U';
+                        else if (type == TimeAssignmentDefOf.Work) chars[i] = 'W';
+                        else if (type == TimeAssignmentDefOf.Joy) chars[i] = 'R';
+                        else if (type == TimeAssignmentDefOf.Sleep) chars[i] = 'S';
+                        else if (type == TimeAssignmentDefOf.Meditate) chars[i] = 'M';
+                        else chars[i] = '?';
+                    }
+                    m.Schedule = new string(chars);
+                }
+
+                // Assignments
+                if (pawn.outfits != null) m.CurrentAssignment_Outfit = pawn.outfits.CurrentApparelPolicy?.label;
+                if (pawn.foodRestriction != null) m.CurrentAssignment_Food = pawn.foodRestriction.CurrentFoodPolicy?.label;
+                if (pawn.drugs != null) m.CurrentAssignment_Drugs = pawn.drugs.CurrentPolicy?.label;
+                // m.CurrentAssignment_Reading // 1.5 only
+
+                if (pawn.playerSettings != null)
+                {
+                    // Use reflection to find the area restriction property as it changes names between versions
+                    var psType = pawn.playerSettings.GetType();
+                    var areaProp = psType.GetProperty("AreaRestriction") 
+                                ?? psType.GetProperty("AreaRestrictionInPawnCurrentMap") 
+                                ?? psType.GetProperty("EffectiveAreaRestriction");
+                    
+                    if (areaProp != null)
+                    {
+                        var area = areaProp.GetValue(pawn.playerSettings) as Area;
+                        m.Area = area?.Label;
+                    }
+
+                    // Also scrape other settings
+                    ScrapeProperties(pawn.playerSettings, dto.RawProperties);
+                }
+
+                dto.Management = m;
             }
 
             return dto;
@@ -122,6 +218,9 @@ namespace RimAI
                 var props = obj.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
                 foreach (var prop in props)
                 {
+                    // Filter out verbose descriptions
+                    if (prop.Name.Contains("Description")) continue;
+
                     if (prop.CanRead && (prop.PropertyType.IsPrimitive || prop.PropertyType == typeof(string) || prop.PropertyType.IsEnum))
                     {
                         try 
