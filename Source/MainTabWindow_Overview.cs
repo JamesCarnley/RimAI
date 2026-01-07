@@ -41,12 +41,18 @@ namespace RimAI
                 }
             }
             
-            Rect debugBtnRect = new Rect(210, y, 150, 30);
+            Rect debugBtnRect = new Rect(210, y, 100, 30);
             if (Widgets.ButtonText(debugBtnRect, "Debug Data"))
             {
                 var data = DataScraper.Scrape();
                 string json = JsonConvert.SerializeObject(data, Formatting.Indented);
                 Find.WindowStack.Add(new Dialog_DebugInfo(json));
+            }
+
+            Rect settingsBtnRect = new Rect(320, y, 100, 30);
+            if (Widgets.ButtonText(settingsBtnRect, "Settings"))
+            {
+                 Find.WindowStack.Add(new Dialog_ModSettings(LoadedModManager.GetMod<RimAIMod>()));
             }
 
             y += 40f;
@@ -165,6 +171,19 @@ namespace RimAI
         
         public void StartNewAnalysis()
         {
+            if (string.IsNullOrEmpty(RimAIMod.settings.apiKey))
+            {
+                Find.WindowStack.Add(new Dialog_MessageBox(
+                    "You need to configure your Gemini API Key in the settings to use this feature.",
+                    "Open Settings", 
+                    () => Find.WindowStack.Add(new Dialog_ModSettings(LoadedModManager.GetMod<RimAIMod>())),
+                    "Cancel", 
+                    null, 
+                    "Missing API Key"
+                ));
+                return;
+            }
+
             isLoading = true;
             chatSession.Clear();
             
