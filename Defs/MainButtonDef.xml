@@ -5,7 +5,7 @@
     <label>RimAI</label>
     <description>Open the RimAI Overview window.</description>
     <tabWindowClass>RimAI.MainTabWindow_Overview</tabWindowClass>
-    <iconPath>UI/OverviewIcon</iconPath>
+    <iconPath>UI/RimAI</iconPath>
     <order>90</order>
   </MainButtonDef>
 </Defs>

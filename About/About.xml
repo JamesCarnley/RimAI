@@ -6,5 +6,6 @@
   <supportedVersions>
     <li>1.6</li>
   </supportedVersions>
+  <modVersion>1.0</modVersion>
   <description>Adds an AI-powered colony overview button to RimWorld. Requires an API Key from Google Gemini.</description>
 </ModMetaData>
